@@ -340,5 +340,8 @@ Both are powered by **Google’s Gemini models** and integrated through the Fast
 - **Scalable**: Front-end apps stay lightweight—heavy AI processing is handled server-side.
 - **Safe & personalized**: AI replies always consider the patient’s latest condition and doctor’s advice.
 
+## How To Run This Application
+- At each folder which is the Website and Mobile Application there are 2 other folders which is folders for the backend and the frontend, in those folders there is a Readme.md file, just follow the steps and you are good to go
+
 
 
