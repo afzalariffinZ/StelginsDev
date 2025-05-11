@@ -1,16 +1,26 @@
-# Welcome to your Expo app 👋
+
+# Welcome to our Stelggin App
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
+
 ## Get started
 
-1. Install dependencies
+1. Install Expo Go on your device (Android/IOS).
+2. Clone this repo.
+3. Head to this directory by using
+
+   ```bash 
+   cd .\StelgginDev\PatientApp_MobileApp\Frontend\
+   ```
+   
+4. Install dependencies
 
    ```bash
    npm install
    ```
 
-2. Start the app
+5. Start the app
 
    ```bash
    npx expo start
