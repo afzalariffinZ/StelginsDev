@@ -1,0 +1,57 @@
+[
+  {
+    "id": "1",
+    "title": "Healthy Meal Planning",
+    "messages": [
+      { "from": "ai", "text": "Hi! Looking to improve your diet today?" },
+      { "from": "user", "text": "Yes, I need help planning healthy meals for the week." },
+      { "from": "ai", "text": "Great! Do you have any dietary preferences or restrictions?" },
+      { "from": "user", "text": "I'm vegetarian and trying to eat more protein." },
+      { "from": "ai", "text": "Got it. I’ll suggest a weekly plan with protein-rich vegetarian options like lentils, chickpeas, tofu, and quinoa." }
+    ]
+  },
+  {
+    "id": "2",
+    "title": "Intermittent Fasting Questions",
+    "messages": [
+      { "from": "ai", "text": "Hello! How can I assist with your health goals today?" },
+      { "from": "user", "text": "Is intermittent fasting safe for beginners?" },
+      { "from": "ai", "text": "For most healthy adults, yes. A common starting point is the 16:8 method—fasting for 16 hours and eating within an 8-hour window." },
+      { "from": "user", "text": "Can I drink coffee during the fasting period?" },
+      { "from": "ai", "text": "Yes, as long as it’s black coffee without sugar or milk." }
+    ]
+  },
+  {
+    "id": "3",
+    "title": "Daily Water Intake",
+    "messages": [
+      { "from": "ai", "text": "Hey! Staying hydrated today?" },
+      { "from": "user", "text": "How much water should I drink daily?" },
+      { "from": "ai", "text": "A general rule is about 2 liters (8 glasses), but it can vary based on activity level, climate, and body size." },
+      { "from": "user", "text": "I exercise daily. Should I drink more?" },
+      { "from": "ai", "text": "Yes, definitely. You might need an extra 0.5–1 liter depending on how much you sweat." }
+    ]
+  },
+  {
+    "id": "4",
+    "title": "Low-Carb Diet Guidance",
+    "messages": [
+      { "from": "ai", "text": "Hi there! Interested in any specific diet plans today?" },
+      { "from": "user", "text": "I want to try a low-carb diet. Any tips?" },
+      { "from": "ai", "text": "Sure! Focus on lean proteins, healthy fats, and non-starchy vegetables like spinach, broccoli, and zucchini." },
+      { "from": "user", "text": "Can I still eat fruit?" },
+      { "from": "ai", "text": "Yes, but choose low-sugar fruits like berries in moderation." }
+    ]
+  },
+  {
+    "id": "5",
+    "title": "Sleep and Diet Connection",
+    "messages": [
+      { "from": "ai", "text": "Welcome back! Need help with health habits?" },
+      { "from": "user", "text": "I’ve been sleeping poorly. Could it be my diet?" },
+      { "from": "ai", "text": "Definitely possible. Eating heavy meals or caffeine late at night can affect sleep quality." },
+      { "from": "user", "text": "What should I eat before bed then?" },
+      { "from": "ai", "text": "Try a light snack like a banana, almonds, or a small bowl of oatmeal—these can help promote better sleep." }
+    ]
+  }
+]
