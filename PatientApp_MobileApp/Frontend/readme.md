@@ -7,7 +7,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 ## Get started
 
 1. Install Expo Go on your device (Android/IOS).
-2. Clone this repo.
+2. Clone this repository.
 3. Head to this directory by using
 
    ```bash 
