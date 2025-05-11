@@ -12,3 +12,9 @@ If credentials.json or any other credentials are required, please contact ahmadi
 
 Let me know if you'd like to include setup instructions for using the credentials or any environment variable details.
 
+## Run the development server:
+```bash
+uvicorn main:app --reload
+```
+
+
