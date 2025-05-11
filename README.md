@@ -1,7 +1,7 @@
 
 
 
-# 🏥 Stellgin 
+# 🏥 Stelggin 
 ![Stellgin intro](https://github.com/user-attachments/assets/ca08a2bd-3bc7-461b-8f7e-b79ada56f7da)
 
 ## UI Snippets  
