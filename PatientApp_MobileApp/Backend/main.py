@@ -26,7 +26,7 @@ import base64
 load_dotenv()
 
 
-genai.configure(api_key="REPLACE_WITH_OWN_API_KEY")
+genai.configure(api_key="AIzaSyABQzFsm5x5QWxTzTKdfTtHIi05ty5dlL0")
 
 # --- Initialize Gemini Models ---
 # For text-only chat

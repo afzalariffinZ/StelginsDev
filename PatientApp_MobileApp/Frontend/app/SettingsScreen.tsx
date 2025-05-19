@@ -18,12 +18,25 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     const onBackPress = () => {
-      router.back();
-      return true;
+      // Your back press logic
+      console.log("Hardware back press on this screen");
+      // Return true to prevent default behavior (e.g., exiting app, going back in nav stack)
+      // Return false to allow default behavior
+      return false; // Example: allow default back behavior
     };
-    BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-  }, [router]);
+
+    // Add the event listener and store the subscription
+    const backHandlerSubscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    // Cleanup function: This is called when the component unmounts
+    return () => {
+      console.log("Removing BackHandler listener as component unmounts");
+      backHandlerSubscription.remove(); // Correct way to remove the listener
+    };
+  }, []); // Add any dependencies if `onBackPress` uses props or state
 
 
 

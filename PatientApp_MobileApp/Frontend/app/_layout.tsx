@@ -1,36 +1,41 @@
-import React, { useEffect, useRef } from 'react'; // Added useEffect, useRef
+// app/_layout.tsx
+import React, { useEffect, useRef } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, SplashScreen } from 'expo-router'; // Added SplashScreen
+import { Stack, SplashScreen } from 'expo-router';
 import 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
-import * as Notifications from 'expo-notifications'; // Added Notifications
+import * as Notifications from 'expo-notifications';
 import { LogBox, Platform } from 'react-native';
 
-import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext'; // Assuming this is the correct path
 import { useColorScheme } from '@/hooks/useColorScheme';
 
-// Assuming your notificationService.ts is in ../utils/notificationService.ts
-// Adjust the path if it's different.
+// Assuming your notificationService.ts is in the same directory as _layout.tsx
+// or adjust path accordingly. For instance, if Notification.ts is in 'app/' directory.
 import {
   requestNotificationPermissions,
   scheduleHardcodedNotification,
   setupNotificationInteractionListener,
-  // setupNotificationReceivedListener // Optional, if you need to handle notifications received in foreground
-} from './Notification'; // <--- MAKE SURE THIS PATH IS CORRECT
+  // setupNotificationReceivedListener // Optional
+} from './Notification'; // Adjust path if './Notification.ts' is not correct
+
+// --- Import ChatProvider ---
+import { ChatProvider } from './ChatContext'; // Adjust path if your contexts folder is elsewhere
 
 // --- Notification Configuration ---
-const NOTIFICATION_DELAY_SECONDS = 60 * 1; // Example: 5 minutes. Change as needed.
+const NOTIFICATION_DELAY_SECONDS = 60 * 1; // Example: 1 minute
 const NOTIFICATION_TITLE = "Medication Reminder 💊";
 const NOTIFICATION_BODY = "It's time to take your medication. Stay healthy and take care!";
-const NOTIFICATION_DATA = { screen: '/some-target-screen' }; // Optional: for deep linking when tapped
+const NOTIFICATION_DATA = { screen: '/ProgressScreen' }; // Example: deep link to ProgressScreen
 
-function AppStackWithLanguageKey() {
-  const { language, t } = useLanguage(); // Assuming 't' is available for potential translated messages
+function AppStackWithProviders() {
+  const { language, t } = useLanguage();
   const colorScheme = useColorScheme();
   const interactionListener = useRef<Notifications.Subscription>();
-  // const receivedListener = useRef<Notifications.Subscription>(); // Optional
 
+  LogBox.ignoreLogs(["Warning: Text strings must be rendered within a <Text> component."]);
+  
   useEffect(() => {
     let isMounted = true;
 
@@ -38,21 +43,17 @@ function AppStackWithLanguageKey() {
       console.log("Attempting to initialize app notifications...");
       const permissionsGranted = await requestNotificationPermissions();
 
-      if (Platform.OS === 'android') { // Only in dev mode and on Android
-        // Check if running in Expo Go (a common way, though not foolproof)
-        // Constants.expoConfig.hostUri might be more reliable if available early
-        // For simplicity, this targets the known warning string.
+      if (Platform.OS === 'android') {
         LogBox.ignoreLogs([
           "expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go."
         ]);
-        // You might want a more general pattern if the message slightly changes:
-        // LogBox.ignoreLogs([/expo-notifications: Android Push notifications/]);
       }
 
       if (permissionsGranted && isMounted) {
         console.log("Notification permissions granted. Scheduling hardcoded notification.");
         await scheduleHardcodedNotification(
           NOTIFICATION_DELAY_SECONDS,
+          // Use t() for translated strings if available and desired for notifications
           NOTIFICATION_TITLE,
           NOTIFICATION_BODY,
           NOTIFICATION_DATA
@@ -62,35 +63,29 @@ function AppStackWithLanguageKey() {
         console.warn("Notification permissions were not granted or component unmounted.");
       }
 
-      // Setup listener for when user taps a notification
       if (isMounted) {
         interactionListener.current = setupNotificationInteractionListener();
-        // receivedListener.current = setupNotificationReceivedListener(); // Optional
         console.log("Notification interaction listener set up.");
       }
     }
 
-    // Only run initialization once
     if (isMounted) {
       initializeAppNotifications();
     }
 
     return () => {
       isMounted = false;
-      // Cleanup listeners
       if (interactionListener.current) {
         Notifications.removeNotificationSubscription(interactionListener.current);
         console.log("Notification interaction listener removed.");
       }
-      // if (receivedListener.current) {
-      //   Notifications.removeNotificationSubscription(receivedListener.current);
-      // }
     };
-  }, []); // Empty dependency array means this runs once when AppStackWithLanguageKey mounts
+  }, [t]); // Added 't' as a dependency if used in notification text
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
+        {/* List your screens here */}
         <Stack.Screen name="LanguageScreen" />
         <Stack.Screen name="AIChatScreen" />
         <Stack.Screen name="DataConsentScreen" />
@@ -102,6 +97,7 @@ function AppStackWithLanguageKey() {
         <Stack.Screen name="SignUpScreen" />
         <Stack.Screen name="FitnessSummaryScreen" />
         <Stack.Screen name="ProfileScreen" />
+        {/* Add other screens as needed */}
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar hidden={true} />
@@ -110,38 +106,37 @@ function AppStackWithLanguageKey() {
 }
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({ // Capture error for debugging
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  const [loaded, error] = useFonts({
+    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'), // Adjust path if needed
   });
 
   useEffect(() => {
+    // Prevent auto-hiding splash screen until fonts are loaded
+    // This should be called before any potential hideAsync calls.
+    SplashScreen.preventAutoHideAsync();
+  }, []);
+
+  useEffect(() => {
     if (loaded || error) {
-      SplashScreen.hideAsync(); // Hide splash screen once fonts are loaded or if there's an error
+      SplashScreen.hideAsync();
     }
   }, [loaded, error]);
 
 
-  useEffect(() => {
-    // Prevent auto-hiding splash screen until fonts are loaded
-    SplashScreen.preventAutoHideAsync();
-  }, []);
-
-
-  if (!loaded && !error) { // Show splash/null only if fonts are still loading and no error
-    return null;
+  if (!loaded && !error) {
+    return null; // Keep showing splash screen (or native launch screen)
   }
 
-  // If there was a font loading error, you might want to display an error message
-  // or a fallback UI instead of just proceeding. For now, we'll proceed.
-  // if (error) {
-  //   console.error("Font loading error:", error);
-  //   // return <Text>Error loading fonts.</Text>; // Example error UI
-  // }
-
+  if (error) {
+    console.error("Font loading error:", error);
+    // Optionally, render a fallback UI here or just proceed
+  }
 
   return (
     <LanguageProvider>
-      <AppStackWithLanguageKey />
+      <ChatProvider> {/* ChatProvider wraps the part of the app that needs chat state */}
+        <AppStackWithProviders />
+      </ChatProvider>
     </LanguageProvider>
   );
 }
