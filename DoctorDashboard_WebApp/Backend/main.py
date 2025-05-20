@@ -10,6 +10,7 @@ import numpy as np
 from fastapi import HTTPException
 import random
 
+import requests
 import openai
 import ast
 from dotenv import load_dotenv
