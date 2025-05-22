@@ -1,5 +1,5 @@
 
-from fastapi import FastAPI,Query
+from fastapi import FastAPI,Query,File, UploadFile
 from pydantic import BaseModel
 import firebase_admin
 from firebase_admin import credentials, db 
@@ -9,18 +9,27 @@ from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 from fastapi import HTTPException
 import random
-
+import google.generativeai as genai
+import json
+import re
+import PIL.Image
 import requests
-import openai
+import io
+from datetime import datetime, timedelta
 import ast
+import openai
 from dotenv import load_dotenv
 import os
 import re
 import google.generativeai as genai
-import matplotlib.pyplot as plt
+
+
 
 
 app = FastAPI()
+
+with open("AI_memory.txt", "w") as file:
+        file.write(f" ")
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,7 +40,7 @@ app.add_middleware(
 )
 
 # ——— 1) Initialize Firebase Admin (do this once) ———
-cred = credentials.Certificate('credentials.json')
+cred = credentials.Certificate('credentials2.json')
 firebase_admin.initialize_app(cred, {
     'databaseURL': 'https://ellm-hackathon-default-rtdb.asia-southeast1.firebasedatabase.app/'
 })
@@ -178,6 +187,7 @@ async def get_latest_log_entries(drid: int = Query(...)):
     df2["datetime"]= pd.to_datetime(df2["datetime"])
 
     # Grab the 4 rows with the largest datetime values
+
     top4 = df2.nlargest(4, "datetime")
 
     #print(top4)
@@ -559,6 +569,169 @@ async def get_steps(patientid: int = Query(...)):
     # Now df has your two new columns
     return df.to_dict(orient="records")
 
+@app.get("/get_steps_phone")
+async def get_steps_phone(patientid: int = Query(...)):
+    raw = db.reference("steps_table").get()
+    if isinstance(raw, dict):
+        records = list(raw.values())
+    elif isinstance(raw, list):
+        records = raw
+    else:
+        records = []
+    df = pd.DataFrame(records)
+    df = df[df["PatientID"] == patientid]
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    df['day'] = df['Date'].dt.day_name()
+    
+
+    df["Calories_Burned"] = df["NumberOfSteps"].apply(estimate_calories_burned)
+
+    # Create Total_Distance column
+    df["Total_Distance_km"] = df["NumberOfSteps"].apply(estimate_distance_km)
+
+    # Now df has your two new columns
+    return df.to_dict(orient="records")
+
+
+genai.configure(api_key="AIzaSyBAn6JnA-xS1OykCuJ7UDMkEIFHAd-_iyE")
+
+# --- Initialize Gemini Models ---
+# For text-only chat
+text_model = genai.GenerativeModel('gemini-2.0-flash')
+chat_session = text_model.start_chat(history=[]) # Maintain chat history for context
+
+class ImageAIResponse(BaseModel):
+    message: str
+    original_filename: str
+
+@app.post("/upload-image")
+async def upload_image(
+    dt_string : str,
+    patientid : int,
+    file: UploadFile = File(...)
+    #prompt: str = Form("Analyze the image and format answer in the following json format:Food,calories(kcal), fat(g), sodium(g), sugar(g)") # Optional prompt from frontend
+):
+    try:
+        #print(f"Received image: {file.filename}, prompt: {prompt}")
+        IMGUR_CLIENT_ID = "a88f57f1c0bc4fd"
+        IMGUR_UPLOAD_ENDPOINT = "https://api.imgur.com/3/image"
+
+        contents = await file.read()
+        
+        # Prepare image for Gemini Vision
+        img = PIL.Image.open(io.BytesIO(contents))
+
+        prompt = f"""
+            Analyze the image and format answer in the following json format:
+            Food,calories(kcal), fat(g), sodium(g), sugar(g)
+            your response should only be the json and nothing else
+
+        """
+        
+        prompt_parts = [prompt, img]
+
+        response = text_model.generate_content(prompt_parts)
+        answer = response.text
+        answer = re.sub(r'```json', '', answer)
+        answer = re.sub(r'```', '', answer)
+        answer_json = json.loads(answer)
+        #print(f"{answer_json}")
+
+        headers = {"Authorization": f"Client-ID {IMGUR_CLIENT_ID}"}
+        resp = requests.post(
+            IMGUR_UPLOAD_ENDPOINT,
+            headers=headers,
+            files={"image": contents}
+        )
+        resp.raise_for_status()
+        image_link = resp.json()["data"]["link"]
+        answer_json["image_link"] = image_link
+
+        #now = datetime.now()
+        #dt_string = now.strftime("%Y-%m-%d %H:%M:%S") 
+
+        table_ref = db.reference('diet_logs')
+        raw = table_ref.get()
+        
+        new_diet_log = {
+            "PatientID":patientid,
+            "calorie_intake":answer_json["calories(kcal)"],
+            "datetime":dt_string,
+            "fat_intake":answer_json["fat(g)"],
+            "imagelink":image_link,
+            "notes":answer_json["Food"],
+            "sodium_intake":answer_json["sodium(g)"],
+            "sugar_intake":answer_json["sugar(g)"]
+        }
+
+        table_ref.push(new_diet_log)
+
+        return answer_json
+    
+    except Exception as e:
+        print(f"Error during image processing: {e}")
+        if hasattr(e, 'prompt_feedback') and e.prompt_feedback.block_reason:
+             return ImageAIResponse(message=f"Content blocked: {e.prompt_feedback.block_reason.name}", original_filename=file.filename or "unknown")
+        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
+    
+
+@app.get("/get_nutrient_trend_phone_week")
+async def get_nutrient_trend_phone_week(patientid: int = Query(...)):
+    # 1) Fetch raw diet logs
+    raw = db.reference("diet_logs").get() or {}
+    records = list(raw.values()) if isinstance(raw, dict) else raw
+
+    # 2) Build DataFrame and filter by patient
+    df = pd.DataFrame(records)
+    df = df[df["PatientID"] == patientid]
+    df['datetime'] = pd.to_datetime(df['datetime'], errors='coerce')
+    df['day'] = df['datetime'].dt.day_name()
+    df['date'] = df['datetime'].dt.date
+
+    # 3) Compute date range: from 6 days ago up to today
+    today = datetime.now().date()
+    seven_days_ago = today - timedelta(days=6)
+
+    # 4) Filter DataFrame to the past 7 days
+    mask = (df['date'] >= seven_days_ago) & (df['date'] <= today)
+    week_df = df.loc[mask]
+
+    # 5) Group by date and sum each nutrient
+    grouped = week_df.groupby('date')[
+        ['sodium_intake', 'sugar_intake', 'fat_intake', 'calorie_intake']
+    ].sum().round(2).reset_index()
+
+    # 6) Add day name column
+    grouped['day'] = pd.to_datetime(grouped['date']).dt.day_name()
+
+    # 7) Convert to list-of-dicts for JSON
+    trend_list = grouped.to_dict(orient='records')
+
+    return {
+        "patientid": patientid,
+        "from": str(seven_days_ago),
+        "to": str(today),
+        "trend": trend_list
+    }
+
+class stepsinput(BaseModel):
+    patientid: int
+    date:str
+    steps:int
+
+@app.post("/post_steps")
+async def post_steps(req: stepsinput):
+    table_ref = db.reference('steps_table')
+    #raw = table_ref.get()
+    new_steps = {
+        "Date":req.date,
+        "NumberOfSteps":req.steps,
+        "PatientID":req.patientid
+    }
+
+    table_ref.push(new_steps)
+    return {"success": True, "message": "New Steps Added"}
+
 
 def get_df(table_name:str, dr_id:int):
     table_ref = db.reference(table_name)
@@ -631,6 +804,12 @@ def get_ai_reply(query):
 
     return response.choices[0].message.content
 
+from fastapi.responses import FileResponse, JSONResponse
+import openai
+from dotenv import load_dotenv
+import os
+import re
+import google.generativeai as genai
 
 @app.post("/chat_bot_dr")
 def chat_bot_dr(dr_id:int, question:str):
@@ -761,12 +940,25 @@ def chat_bot_dr(dr_id:int, question:str):
     # Use the Gemini Pro model (text-only)
     model = genai.GenerativeModel("gemini-2.0-flash")
 
+    with open("AI_memory.txt", "r") as file:
+        history = file.read()
+
     prompt2 = f"""
+    This is the chat_history:{history}
     Based on the final output which is this :{Final_Output},
     provide a proper answer to this question which is : {question}
     make sure your answer is direct and dont add anything unnecessary
+    if you think the question is a troll just asnwer i dont know
     """
     response_gemini = model.generate_content(prompt2)
+
+    with open("AI_memory.txt", "a") as file:
+        file.write(f"""
+        --------------------------
+        Question : {question}
+        Answer : {response_gemini.text}
+        --------------------------
+        """)
 
     # If no graph, return JSON only
 
@@ -826,9 +1018,22 @@ def chat_bot_dr(dr_id:int, question:str):
 
 
 
+
+
+
+
+
     
     
 
 
 
     
+
+
+
+
+
+
+
+
