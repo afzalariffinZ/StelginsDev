@@ -16,3 +16,8 @@ uvicorn main:app --reload
 If credentials.json or any other credentials are required, please contact ahmadimanh3@gmail.com for access.
 
 Let me know if you'd like to include setup instructions for using the credentials or any environment variable details.
+
+API keys needed:
+1 - OpenAI API key
+2 - Gemini API key
+3 - IMGUR Client ID
