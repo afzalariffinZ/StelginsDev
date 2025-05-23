@@ -276,7 +276,7 @@ Both apps use Firebase’s realtime sync ➜ providing instant, seamless updates
 | **Web Dashboard**  | React (Typescript), Tailwind CSS |
 | **Backend**        | FastAPI (Python)                 |
 | **Database**       | Firebase Realtime Database       |
-| **AI Integration** | Gemini APIs (via Backend)        |
+| **AI Integration** | Gemini and OpenAI APIs (via Backend)        |
 
 
 
