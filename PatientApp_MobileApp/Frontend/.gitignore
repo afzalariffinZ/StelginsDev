@@ -37,4 +37,4 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
-credentials.json
+PatientApp_MobileApp/Backend/credentials.json
