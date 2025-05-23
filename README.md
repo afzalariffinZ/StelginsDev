@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/3cf572be-95d0-45a2-966b-3d247136d9dc)
+
 
 
 # 🏥 Stelggin 
