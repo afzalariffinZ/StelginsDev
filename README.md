@@ -105,6 +105,9 @@
 ![dietlog](https://github.com/user-attachments/assets/69ba3e74-7c26-4038-a6be-6e675e353a64)
 ![steps log](https://github.com/user-attachments/assets/37f3a181-6fc8-4aa1-b448-77c6b54909ba)
 ![targets](https://github.com/user-attachments/assets/9b4b382b-917a-4b88-97f0-44cc64e1ae56)
+![image](https://github.com/user-attachments/assets/b18df551-33fe-4417-9a40-7586f5fbdecb)
+![image](https://github.com/user-attachments/assets/d410f834-4ccc-45bd-9d40-e9ffc9fa1ac8)
+![image](https://github.com/user-attachments/assets/2b8258b2-cb79-4fc9-aa10-0d8cc7676004)
 
 
 
