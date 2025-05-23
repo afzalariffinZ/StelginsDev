@@ -1,4 +1,4 @@
-
+![image](https://github.com/user-attachments/assets/3cf572be-95d0-45a2-966b-3d247136d9dc)
 
 
 # 🏥 Stelggin 
@@ -233,11 +233,12 @@ Built using **React (Typescript)** and **Tailwind CSS**, the doctor's dashboard 
 
 * 👩‍⚕️ Monitor multiple patients simultaneously
 * 📊 View real-time patient stats:
-
   * Cumulative daily intake (calories, sugar, fat, sodium)
   * Step counts and calories burned
 * ✍️ Set or adjust each patient’s **nutritional limits**
 * 💬 Leave **personalized dietary suggestions or notes** that sync to the patient’s app
+* 🤖 Gain insights and generate visualisations from our **chatbot assistant** by just prompting
+
 
 ✅ All changes are **instantly synced** via Firebase, enabling two-way communication and live tracking.
 
@@ -281,11 +282,11 @@ Both apps use Firebase’s realtime sync ➜ providing instant, seamless updates
 
 ## 🤖 LLM Architecture Overview
 
-AI functionality in this system is divided into **two core tasks**:  
+AI functionality in this system is divided into **three core tasks**:  
 - 🥗 **Meal Analysis** (using multimodal input)  
 - 💬 **Personalized Chatbot Interactions**  
-
-Both are powered by **Google’s Gemini models** and integrated through the FastAPI backend, which handles context building and API communication.
+- 🤖 **Doctor's Analytics Assistant Hub**
+These LLMs are powered by **Google’s Gemini and OpenAI models** integrated through the FastAPI backend, which handles context building and API communication.
 
 ---
 
@@ -334,6 +335,33 @@ Both are powered by **Google’s Gemini models** and integrated through the Fast
    The chatbot reply is delivered back to the app’s chat window, ready for the user to read and act on.
 
 > 🔒 By using real-time health data and doctor-defined limits, every chatbot reply stays **relevant** and **clinically safe** for the patient.
+
+### 🤖 Doctor's Analytics Assistant Hub (LLM + Code Gen Pipeline)
+
+1. **Doctor submits a natural language query**  
+   The doctor types a data-focused question (e.g., _"Compare the average daily fat intake between all patients"_) into the analytics interface.
+
+2. **Query sent to OpenAI code-generation model**  
+   The prompt is sent to an **OpenAI LLM** specialized in generating Python code based on natural language instructions.
+
+3. **Generate Python code for analysis**  
+   The model returns executable Python code that processes relevant data.  
+   If the query involves visualization, the code includes `matplotlib` to generate graphs (e.g., bar charts).
+
+4. **Execute code and gather results**  
+   The system runs the generated code and captures the output:  
+   - 📊 **Graphs** (e.g., bar charts, line plots)  
+   - 📋 **Summarized statistics** (e.g., averages, comparisons)
+
+5. **Send results to Gemini 2.0 Flash for rapid explanation**  
+   The raw output (charts or stats) is passed to **Gemini 2.0 Flash**, a lightweight LLM optimized for **fast and clear explanations**.
+
+6. **Display insight with visuals**  
+   The doctor receives both the **visual output** and a **concise, readable summary** explaining the results in a clinically meaningful way.
+
+> ⚡ This dual-LLM pipeline allows doctors to ask **complex data questions** in natural language and get **instant, insightful answers**—without writing a single line of code.
+
+
 
 ---
 
