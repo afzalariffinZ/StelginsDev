@@ -31,7 +31,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 # Load environment variables (optional, but good practice for API keys)
 load_dotenv()
 
-genai.configure(api_key="AIzaSyABQzFsm5x5QWxTzTKdfTtHIi05ty5dlL0")
+genai.configure(api_key="YOUR-API-KEY")
 
 # --- Initialize Gemini Models ---
 # For text-only chat

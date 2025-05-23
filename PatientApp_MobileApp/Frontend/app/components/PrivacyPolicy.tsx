@@ -34,9 +34,6 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ t }) => {
       <Text style={styles.listItem}>- {t('privacy_share_item_providers', { defaultValue: "Only with third-party service providers (e.g., cloud hosting, analytics) under strict confidentiality agreements." })}</Text>
       <Text style={styles.listItem}>- {t('privacy_share_item_law', { defaultValue: "With law enforcement or regulators, if required by law." })}</Text>
       <Text style={styles.listItem}>- {t('privacy_share_item_anonymized', { defaultValue: "We may share anonymized data with research institutions or analytics providers." })}</Text>
-      <Text style={styles.paragraph}>
-        {t('privacy_share_no_sell', { defaultValue: "We do not sell, rent, or trade your personal data." })}
-      </Text>
       <Text style={styles.listItem}>- {t('privacy_share_item_sell', { defaultValue: "We do not sell, rent, or trade your personal data. We only sell necessary data anonymously (e.g., diet log, activity log, diet progress)  to trusted research institutes for diet related research purposes." })}</Text>
 
       <Text style={styles.sectionTitle}>{t('privacy_pdpa_rights_title', { defaultValue: "Your PDPA Rights:" })}</Text>

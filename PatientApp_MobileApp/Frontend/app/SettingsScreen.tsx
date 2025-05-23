@@ -116,23 +116,23 @@ export default function SettingsScreen() {
 
         <View style={styles.card}>
           <TouchableOpacity style={styles.row} onPress={() => {
-            setModalContent('terms');
-            setShowInfoModal(true);
+            setModalContentType('tos');
+            setInfoModalVisible(true);
           }}>
             <View style={styles.iconCircle}><Text style={styles.icon}>📄</Text></View>
             <Text style={styles.rowLabel}>{t('tos')}</Text>
             <View style={styles.rowRight}><Text style={styles.rowArrow}>›</Text></View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.row} onPress={() => {
-            setModalContent('privacy');
-            setShowInfoModal(true);
+            setModalContentType('privacy');
+            setInfoModalVisible(true);
           }}>
             <View style={styles.iconCircle}><Text style={styles.icon}>🛡️</Text></View>
             <Text style={styles.rowLabel}>{t('privacy')}</Text>
             <View style={styles.rowRight}><Text style={styles.rowArrow}>›</Text></View>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.logoutCard} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutCard} onPress={() => router.replace('/LoginScreen')}>
           <Text style={styles.logoutIcon}>🚪</Text>
           <Text style={styles.logoutText}>{t('logout')}</Text>
         </TouchableOpacity>
