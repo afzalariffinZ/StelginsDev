@@ -181,7 +181,7 @@ Built with **React Native** (iOS & Android), the patient app empowers users to:
 3. **Secure upload**  
    Sent via FastAPI with authentication tokens.  
 4. **Backend AI call**  
-   Gemini processes the image and returns nutritional estimates.  
+   Gemini processes the image, retrieve information from a vector database (chromadb) and predict nutritional estimates.  
 5. **Write to Firebase**  
    Results are stored under the patient’s record.  
 6. **Update UI & history**  
@@ -298,18 +298,22 @@ These LLMs are powered by **Google’s Gemini and OpenAI models** integrated thr
    The mobile app sends the image to the backend via FastAPI.  
 
 2. **Forward to Gemini 2.0 Flash**  
-   The backend calls Gemini’s multimodal model, which can analyze the image and return structured nutritional data.
+   The backend calls Gemini’s multimodal model, which can analyze the image and identify the food name and ingredients.
 
-3. **AI estimates nutritional values**  
+3. **Retrieve Information from vector database**
+   From the ingredients retrieved from the response of the LLM, real nutritonal information is retrieved from a chromadb vector database to provide additional context to 
+   the LLM to make more accurate nutritional estimates.
+
+5. **AI estimates nutritional values**  
    - 🔥 **Calories**  
    - 🍬 **Sugar content**  
    - 🥓 **Fat content**  
    - 🧂 **Sodium levels**  
 
-4. **Parse and store results**  
+6. **Parse and store results**  
    The backend processes the AI response and writes the estimated values into the patient’s record in **Firebase Realtime Database**.
 
-5. **Real-time updates**  
+7. **Real-time updates**  
    Both the patient’s app and doctor’s dashboard reflect the new meal data instantly, thanks to Firebase’s sync mechanism.
 
 > ✅ This architecture hides the AI model complexity from front-end apps while keeping updates **fast** and **real-time**.
