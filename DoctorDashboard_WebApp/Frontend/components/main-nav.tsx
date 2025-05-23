@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, Users, Settings } from "lucide-react";
+import { Home, Users, Settings , Sparkles   } from "lucide-react";
 
 export function MainNav() {
   const pathname = usePathname();
@@ -29,6 +29,16 @@ export function MainNav() {
       >
         <Users className="h-5 w-5" />
         <span>My Patients</span>
+      </Link>
+      <Link
+        href="/chatbot"
+        className={cn(
+          "sidebar-item",
+          pathname === "/chatbot" && "active"
+        )}
+      >
+        <Sparkles className="h-5 w-5" />
+        <span>Chatbot</span>
       </Link>
       <Link
         href="/settings"
