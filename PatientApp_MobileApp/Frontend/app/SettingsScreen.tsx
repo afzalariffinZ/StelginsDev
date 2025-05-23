@@ -12,8 +12,8 @@ export default function SettingsScreen() {
   const { language, setLanguage, t } = useLanguage();
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [showInfoModal, setShowInfoModal] = useState(false);
-  const [modalContent, setModalContent] = useState<'terms' | 'privacy' | null>(null);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [modalContentType, setModalContentType] = useState<'tos' | 'privacy' | null>(null);
 
   const handleLanguageSelect = async (lang: 'en' | 'ms' | 'zh' | 'ta') => {
     await setLanguage(lang as any);
@@ -26,8 +26,8 @@ export default function SettingsScreen() {
         setLanguageModalVisible(false);
         return true;
       }
-      if (showInfoModal) {
-        setShowInfoModal(false);
+      if (infoModalVisible) {
+        setInfoModalVisible(false);
         return true;
       }
       console.log("Hardware back press on this screen");
@@ -43,7 +43,8 @@ export default function SettingsScreen() {
       console.log("Removing BackHandler listener as component unmounts");
       backHandlerSubscription.remove();
     };
-  }, [languageModalVisible, showInfoModal]);
+  }, [languageModalVisible, infoModalVisible]);
+
 
   const { name, patientId: patientIdParam } = useLocalSearchParams() as { name?: string, patientId?: string };
   const patientId = patientIdParam;
@@ -73,8 +74,8 @@ export default function SettingsScreen() {
   };
 
   const renderInfoModalContent = () => {
-    switch (modalContent) {
-      case 'terms':
+    switch (modalContentType) {
+      case 'tos':
         return <TermsOfService t={t} />;
       case 'privacy':
         return <PrivacyPolicy t={t} />;
@@ -119,7 +120,7 @@ export default function SettingsScreen() {
             setShowInfoModal(true);
           }}>
             <View style={styles.iconCircle}><Text style={styles.icon}>📄</Text></View>
-            <Text style={styles.rowLabel}>{t('termsOfService')}</Text>
+            <Text style={styles.rowLabel}>{t('tos')}</Text>
             <View style={styles.rowRight}><Text style={styles.rowArrow}>›</Text></View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.row} onPress={() => {
@@ -127,7 +128,7 @@ export default function SettingsScreen() {
             setShowInfoModal(true);
           }}>
             <View style={styles.iconCircle}><Text style={styles.icon}>🛡️</Text></View>
-            <Text style={styles.rowLabel}>{t('privacyPolicy')}</Text>
+            <Text style={styles.rowLabel}>{t('privacy')}</Text>
             <View style={styles.rowRight}><Text style={styles.rowArrow}>›</Text></View>
           </TouchableOpacity>
         </View>
@@ -170,26 +171,22 @@ export default function SettingsScreen() {
       </Modal>
 
       <Modal
-        visible={showInfoModal}
+        visible={infoModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowInfoModal(false)}
+        onRequestClose={() => setInfoModalVisible(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowInfoModal(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setInfoModalVisible(false)}>
+          {/* Prevent modal content from closing when pressed */}
           <Pressable onPress={(e) => e.stopPropagation()}>
             <View style={[styles.modalContent, styles.infoModalContentContainer]}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {modalContent === 'terms' ? t('termsOfService') : t('privacyPolicy')}
+              <Text style={styles.modalHeader}>
+                {modalContentType === 'tos' ? t('tos') : modalContentType === 'privacy' ? t('privacy') : ''}
               </Text>
-                <TouchableOpacity onPress={() => setShowInfoModal(false)}>
-                  <Text style={styles.modalClose}>✕</Text>
-                </TouchableOpacity>
-              </View>
               <ScrollView style={styles.infoModalScrollView}>
                   {renderInfoModalContent()}
               </ScrollView>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setShowInfoModal(false)}>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setInfoModalVisible(false)}>
                   <Text style={styles.closeButtonText}>{t('close')}</Text>
               </TouchableOpacity>
             </View>
@@ -335,17 +332,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  modalContent: {
-    width: width * 0.9,
+  modalContent: { // Base style for modals
+    width: width * 0.9, // Wider modal
     maxWidth: 450,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    elevation: 10,
+    borderRadius: 16, // More rounded
+    padding: 20, // Uniform padding
+    elevation: 10, // More pronounced shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
-    shadowRadius: 12
+    shadowRadius: 12,
   },
   modalHeader: {
     fontWeight: 'bold',

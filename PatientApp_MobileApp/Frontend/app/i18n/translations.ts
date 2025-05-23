@@ -122,6 +122,7 @@ export const translations: Record<Language, Translations> = {
     privacy_contact_us_title: 'Contact Us About Privacy',
     privacy_contact_us_text: 'If you have any questions about this Privacy Policy or our privacy practices, please contact us at:',
     privacy_contact_email_value: 'privacy@stelggin.com',
+    privacy_share_item_sell: 'We do not sell, rent, or trade your personal data. We only sell necessary data anonymously (e.g., diet log, activity log, diet progress)  to trusted research institutes for diet related research purposes.',
   
     // Navigation
     home: 'Home',
@@ -397,6 +398,7 @@ export const translations: Record<Language, Translations> = {
     privacy_contact_us_title: 'Hubungi Kami Mengenai Privasi',
     privacy_contact_us_text: 'Jika anda mempunyai sebarang soalan mengenai Dasar Privasi ini atau amalan privasi kami, sila hubungi kami di:',
     privacy_contact_email_value: 'privacy@stelggin.com',
+    privacy_share_item_sell: 'Kami tidak menjual, menyewa, atau memperdagangkan data peribadi anda. Kami hanya menjual data yang perlu (e.g., log pemakanan, aktiviti fizikal, pemajuan pemakanan) kepada institusi penyelidikan yang dipercayai untuk tujuan penyelidikan pemakanan.',
 
     // Navigation
     home: 'Utama',
