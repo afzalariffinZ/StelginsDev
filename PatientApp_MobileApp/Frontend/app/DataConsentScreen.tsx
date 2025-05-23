@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useLanguage } from './i18n/LanguageContext';
 
 const { width } = Dimensions.get('window');
@@ -9,6 +9,15 @@ export default function DataConsentScreen() {
   const router = useRouter();
   const [agreed, setAgreed] = React.useState(false);
   const { t } = useLanguage();
+
+  const { name, patientId: patientIdParam } = useLocalSearchParams() as { name?: string, patientId?: string };
+  const patientId = patientIdParam;
+
+  const patientCredentials = {
+    name: name,    
+    patientId: patientId, 
+    
+  };
 
   return (
     <View style={styles.container}>
@@ -25,7 +34,7 @@ export default function DataConsentScreen() {
         </Pressable>
         <TouchableOpacity
           style={[styles.button, !agreed && styles.disabledButton]}
-          onPress={() => agreed && router.replace('/PermissionsScreen')}
+          onPress={() => agreed && router.replace({pathname:'/PermissionsScreen',params: patientCredentials})}
           disabled={!agreed}
         >
           <Text style={[styles.buttonText, !agreed && styles.disabledButtonText]}>{t('agreeAndContinue')}</Text>

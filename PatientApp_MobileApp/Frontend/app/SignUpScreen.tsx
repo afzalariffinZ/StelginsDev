@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useLanguage } from './i18n/LanguageContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { width } = Dimensions.get('window');
 
@@ -11,8 +12,41 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [DateOfBirth, setDateOfBirth] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [error, setError] = useState('');
   const { t } = useLanguage();
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'web') {
+      const { value } = event.target as HTMLInputElement;
+
+      // Ignore empty strings while the user is still typing
+      if (!value) return;
+
+      const parsed = new Date(value);
+
+      // Ignore obviously bad dates like 00-month or 32-day
+      if (isNaN(parsed.getTime())) return;
+
+      setDateOfBirth(parsed);
+    } else {
+      const currentDate = selectedDate || DateOfBirth;
+      setShowDatePicker(false);
+      setDateOfBirth(currentDate);
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString();
+  };
+
+  const formatDateForDB = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const handleSignUp = async () => { // Make the function async
       if (!name || !email || !password || !confirmPassword) { // TODO: Add age to this check if you make it required
@@ -45,26 +79,26 @@ export default function SignUpScreen() {
           body: JSON.stringify({
             name: name,
             email: email,
-            password: password, // Sending password, though backend doesn't store it for auth
-            age: 0, // !! IMPORTANT: Placeholder for age. Add an age input to your form.
-                    // Your FastAPI endpoint expects `age`.
-                    // Change to: age: parseInt(age, 10) OR handle as needed.
+            password: password, // Sending pTassword, though backend doesn't store it for auth
+            age: 0, 
+            dateofbirth: formatDateForDB(DateOfBirth) // Format date as YYYY-MM-DD
           }),
         });
   
         const data = await response.json();
   
         if (response.ok && data.success) {
-
           const patientCredentials = {
             name: name,    
-            patientId: patientId, 
-            
+            patientId: data.patientId, // Get patientId from the response
           };
           // Sign up successful
           console.log('Sign up successful:', data.message);
           // You might want to pass some data to DataConsentScreen or store it
-          router.replace('/DataConsentScreen');
+          router.replace({
+            pathname: '/DataConsentScreen',
+            params: patientCredentials
+          });
         } else {
           // Sign up failed
           setError(data.message || t('signUpFailed'));
@@ -128,6 +162,48 @@ export default function SignUpScreen() {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>{t('DateOfBirth')}</Text>
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                style={{
+                  width: '100%',
+                  height: '40px',
+                  border: '1px solid #f2f2f2',
+                  borderRadius: '6px',
+                  padding: '0 10px',
+                  backgroundColor: '#fafafa',
+                  fontSize: '15px',
+                  boxSizing: 'border-box'
+                }}
+                value={DateOfBirth && !isNaN(DateOfBirth.getTime())
+                ? DateOfBirth.toISOString().split('T')[0]
+                : ''}
+                onChange={onDateChange}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            ) : (
+              <>
+                <TouchableOpacity 
+                  style={styles.datePickerButton}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={styles.datePickerText}>{formatDate(DateOfBirth
+                  )}</Text>
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={DateOfBirth}
+                    mode="date"
+                    display="calendar"
+                    onChange={onDateChange}
+                    maximumDate={new Date()}
+                  />
+                )}
+              </>
+            )}
           </View>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           <TouchableOpacity
@@ -235,5 +311,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 8,
     alignSelf: 'flex-start',
+  },
+  datePickerButton: {
+    width: '100%',
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#f2f2f2',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    backgroundColor: '#fafafa',
+    justifyContent: 'center',
+  },
+  datePickerText: {
+    fontSize: 15,
+    color: '#222',
   },
 }); 

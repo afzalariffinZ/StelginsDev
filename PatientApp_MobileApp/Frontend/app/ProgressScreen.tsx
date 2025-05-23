@@ -163,7 +163,7 @@ export default function ProgressScreen() {
         const dayIndex = DAYS_ORDER.indexOf(item.day);
         if (dayIndex !== -1) {
           newSugarData[dayIndex] = item.sugar_intake;
-          newSodiumData[dayIndex] = item.sodium_intake * 1000;
+          newSodiumData[dayIndex] = item.sodium_intake;
           newCalorieData[dayIndex] = item.calorie_intake;
           newFatData[dayIndex] = item.fat_intake;
         }

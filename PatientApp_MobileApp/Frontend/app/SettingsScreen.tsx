@@ -1,15 +1,19 @@
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, Modal, Pressable, Switch, BackHandler } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, Modal, Pressable, Switch, BackHandler, Platform, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useLanguage } from './i18n/LanguageContext';
+import TermsOfService from './components/TermsOfService';
+import PrivacyPolicy from './components/PrivacyPolicy';
 
-const { width } = Dimensions.get('window');
+const { width, height: windowHeight } = Dimensions.get('window');
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { language, setLanguage, t } = useLanguage();
-  const [languageModalVisible, setLanguageModalVisible] = React.useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [modalContent, setModalContent] = useState<'terms' | 'privacy' | null>(null);
 
   const handleLanguageSelect = async (lang: 'en' | 'ms' | 'zh' | 'ta') => {
     await setLanguage(lang as any);
@@ -18,42 +22,72 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     const onBackPress = () => {
-      // Your back press logic
+      if (languageModalVisible) {
+        setLanguageModalVisible(false);
+        return true;
+      }
+      if (showInfoModal) {
+        setShowInfoModal(false);
+        return true;
+      }
       console.log("Hardware back press on this screen");
-      // Return true to prevent default behavior (e.g., exiting app, going back in nav stack)
-      // Return false to allow default behavior
-      return false; // Example: allow default back behavior
+      return false;
     };
 
-    // Add the event listener and store the subscription
     const backHandlerSubscription = BackHandler.addEventListener(
       'hardwareBackPress',
       onBackPress
     );
 
-    // Cleanup function: This is called when the component unmounts
     return () => {
       console.log("Removing BackHandler listener as component unmounts");
-      backHandlerSubscription.remove(); // Correct way to remove the listener
+      backHandlerSubscription.remove();
     };
-  }, []); // Add any dependencies if `onBackPress` uses props or state
-
-
+  }, [languageModalVisible, showInfoModal]);
 
   const { name, patientId: patientIdParam } = useLocalSearchParams() as { name?: string, patientId?: string };
   const patientId = patientIdParam;
 
   const patientCredentials = {
-    name: name,    
-    patientId: patientId, 
-    
+    name: name,
+    patientId: patientId,
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      t('logoutConfirmationTitle') || 'Logout',
+      t('logoutConfirmationMessage') || 'Are you sure you want to logout?',
+      [
+        {
+          text: t('cancel') || 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: t('logout') || 'Logout',
+          onPress: () => {
+            router.replace('/LoginScreen');
+          }
+        }
+      ]
+    );
+  };
+
+  const renderInfoModalContent = () => {
+    switch (modalContent) {
+      case 'terms':
+        return <TermsOfService t={t} />;
+      case 'privacy':
+        return <PrivacyPolicy t={t} />;
+      default:
+        return null;
+    }
   };
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.header}>{t('settings')}</Text>
-        
+
         <View style={styles.card}>
           <TouchableOpacity style={styles.row} onPress={() => router.replace({pathname:'/ProfileScreen',params:patientCredentials})}>
             <View style={styles.iconCircle}><Text style={styles.icon}>👤</Text></View>
@@ -78,54 +112,88 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.card}>
-          <TouchableOpacity style={styles.row}>
+          <TouchableOpacity style={styles.row} onPress={() => {
+            setModalContent('terms');
+            setShowInfoModal(true);
+          }}>
             <View style={styles.iconCircle}><Text style={styles.icon}>📄</Text></View>
-            <Text style={styles.rowLabel}>{t('about')}</Text>
+            <Text style={styles.rowLabel}>{t('termsOfService')}</Text>
             <View style={styles.rowRight}><Text style={styles.rowArrow}>›</Text></View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.row}>
+          <TouchableOpacity style={styles.row} onPress={() => {
+            setModalContent('privacy');
+            setShowInfoModal(true);
+          }}>
             <View style={styles.iconCircle}><Text style={styles.icon}>🛡️</Text></View>
-            <Text style={styles.rowLabel}>{t('help')}</Text>
+            <Text style={styles.rowLabel}>{t('privacyPolicy')}</Text>
             <View style={styles.rowRight}><Text style={styles.rowArrow}>›</Text></View>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.logoutCard} onPress={() => router.replace('/LoginScreen')}>
+        <TouchableOpacity style={styles.logoutCard} onPress={handleLogout}>
           <Text style={styles.logoutIcon}>🚪</Text>
           <Text style={styles.logoutText}>{t('logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
-      
+
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem} onPress={() => router.replace({pathname:'/HomeScreen',params: patientCredentials})}><Text style={[styles.navIcon]}>🏠</Text><Text style={[styles.navLabel]}>{t('home')}</Text></TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => router.replace({pathname:'/AIChatScreen',params: patientCredentials})}><Text style={styles.navIcon}>💬</Text><Text style={styles.navLabel}>{t('stelgginAI')}</Text></TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => router.replace({pathname:'/ProgressScreen',params: patientCredentials})}><Text style={styles.navIcon}>📊</Text><Text style={styles.navLabel}>{t('progress')}</Text></TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => router.replace({pathname:'/SettingsScreen',params: patientCredentials})}><Text style={[styles.navIcon, styles.navIconActive]}>⚙️</Text><Text style={[styles.navLabel, styles.navLabelActive]}>{t('settings')}</Text></TouchableOpacity>
       </View>
-      
+
       <Modal
         visible={languageModalVisible}
         transparent
         animationType="fade"
         onRequestClose={() => setLanguageModalVisible(false)}
       >
-        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.2)' }} onPress={() => setLanguageModalVisible(false)}>
-          <View style={{ position: 'absolute', left: 32, right: 32, top: 180, backgroundColor: '#fff', borderRadius: 14, padding: 24, elevation: 8 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 17, marginBottom: 18, color: '#E53935' }}>{t('language')}</Text>
-            <TouchableOpacity style={{ paddingVertical: 12 }} onPress={() => handleLanguageSelect('en')}>
-              <Text style={{ fontSize: 16, color: language === 'en' ? '#E53935' : '#222', fontWeight: language === 'en' ? 'bold' : 'normal' }}>English</Text>
+        <Pressable style={styles.modalOverlay} onPress={() => setLanguageModalVisible(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalHeader}>{t('language')}</Text>
+            <TouchableOpacity style={styles.modalOption} onPress={() => handleLanguageSelect('en')}>
+              <Text style={[styles.modalOptionText, language === 'en' && styles.modalOptionTextActive]}>English</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{ paddingVertical: 12 }} onPress={() => handleLanguageSelect('ms')}>
-              <Text style={{ fontSize: 16, color: language === 'ms' ? '#E53935' : '#222', fontWeight: language === 'ms' ? 'bold' : 'normal' }}>Bahasa Melayu</Text>
+            <TouchableOpacity style={styles.modalOption} onPress={() => handleLanguageSelect('ms')}>
+              <Text style={[styles.modalOptionText, language === 'ms' && styles.modalOptionTextActive]}>Bahasa Melayu</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{ paddingVertical: 12 }} onPress={() => handleLanguageSelect('zh')}>
-              <Text style={{ fontSize: 16, color: language === 'zh' ? '#E53935' : '#222', fontWeight: language === 'zh' ? 'bold' : 'normal' }}>中文 (Chinese)</Text>
+            <TouchableOpacity style={styles.modalOption} onPress={() => handleLanguageSelect('zh')}>
+              <Text style={[styles.modalOptionText, language === 'zh' && styles.modalOptionTextActive]}>中文 (Chinese)</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{ paddingVertical: 12 }} onPress={() => handleLanguageSelect('ta')}>
-              <Text style={{ fontSize: 16, color: language === 'ta' ? '#E53935' : '#222', fontWeight: language === 'ta' ? 'bold' : 'normal' }}>தமிழ் (Tamil)</Text>
+            <TouchableOpacity style={styles.modalOption} onPress={() => handleLanguageSelect('ta')}>
+              <Text style={[styles.modalOptionText, language === 'ta' && styles.modalOptionTextActive]}>தமிழ் (Tamil)</Text>
             </TouchableOpacity>
           </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={showInfoModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowInfoModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowInfoModal(false)}>
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <View style={[styles.modalContent, styles.infoModalContentContainer]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {modalContent === 'terms' ? t('termsOfService') : t('privacyPolicy')}
+              </Text>
+                <TouchableOpacity onPress={() => setShowInfoModal(false)}>
+                  <Text style={styles.modalClose}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.infoModalScrollView}>
+                  {renderInfoModalContent()}
+              </ScrollView>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setShowInfoModal(false)}>
+                  <Text style={styles.closeButtonText}>{t('close')}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>
@@ -137,32 +205,31 @@ const cardShadow = {
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.08,
   shadowRadius: 8,
-  elevation: 2,
+  elevation: 2
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f8fafc'
   },
   scrollContent: {
     paddingBottom: 100,
     paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingTop: 18
   },
   header: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#222',
-    marginBottom: 12,
+    color: '#1a202c',
+    marginBottom: 20,
+    paddingLeft: 4
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
     marginBottom: 18,
-    ...cardShadow,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
+    ...cardShadow
   },
   row: {
     flexDirection: 'row',
@@ -170,64 +237,199 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f2f2f2',
+    borderBottomColor: '#f1f5f9'
   },
   rowLabel: {
     flex: 1,
-    fontSize: 15,
-    color: '#222',
-    marginLeft: 12,
+    fontSize: 16,
+    color: '#2d3748',
+    marginLeft: 16
   },
   rowRight: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   rowValue: {
-    color: '#888',
-    fontSize: 14,
-    marginRight: 4,
+    color: '#718096',
+    fontSize: 15,
+    marginRight: 6
   },
   rowArrow: {
-    color: '#bbb',
-    fontSize: 22,
-    marginLeft: 8,
+    color: '#a0aec0',
+    fontSize: 24,
+    marginLeft: 8
   },
   iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#FDEAEA',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   icon: {
     fontSize: 18,
-    color: '#E53935',
+    color: '#E53935'
   },
   logoutCard: {
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 18,
-    marginBottom: 18,
-    ...cardShadow,
+    marginBottom: 25,
+    ...cardShadow
   },
   logoutIcon: {
     color: '#E53935',
-    fontSize: 18,
-    marginRight: 8,
+    fontSize: 20,
+    marginRight: 10
   },
   logoutText: {
     color: '#E53935',
-    fontSize: 15,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600'
   },
-  bottomNav: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 70, flexDirection: 'row', backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#E2E8F0', justifyContent: 'space-around', alignItems: 'flex-start', paddingTop: 8, paddingBottom:  (Dimensions.get('window').height * 0.01) < 5 ? 5 : (Dimensions.get('window').height * 0.01), zIndex: 5, },
-  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  navIcon: { fontSize: 24, marginBottom: 3, color: '#A0AEC0' },
-  navIconActive: { color: '#E53935' },
-  navLabel: { fontSize: 11, color: '#718096' },
-  navLabelActive: { color: '#E53935', fontWeight: '600' },
-}); 
+  bottomNav: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 75,
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingTop: 5,
+    paddingBottom: Platform.OS === 'ios' ? 15 : 5,
+    zIndex: 1000
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  navIcon: {
+    fontSize: 26,
+    marginBottom: 4,
+    color: '#A0AEC0'
+  },
+  navIconActive: {
+    color: '#E53935'
+  },
+  navLabel: {
+    fontSize: 10,
+    color: '#718096',
+    fontWeight: '500'
+  },
+  navLabelActive: {
+    color: '#E53935',
+    fontWeight: '700'
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  modalContent: {
+    width: width * 0.9,
+    maxWidth: 450,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12
+  },
+  modalHeader: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginBottom: 20,
+    color: '#E53935',
+    textAlign: 'center'
+  },
+  modalOption: {
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#edf2f7'
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#2d3748',
+    textAlign: 'center'
+  },
+  modalOptionTextActive: {
+    color: '#E53935',
+    fontWeight: 'bold'
+  },
+  infoModalContentContainer: {
+    maxHeight: windowHeight * 0.85,
+    paddingHorizontal: 5
+  },
+  infoModalScrollView: {
+    marginBottom: 20,
+    paddingHorizontal: 15
+  },
+  infoModalHeading: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1a202c',
+    marginBottom: 15,
+    textAlign: 'center'
+  },
+  infoModalSectionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginTop: 20,
+    marginBottom: 8
+  },
+  infoModalParagraph: {
+    fontSize: 15,
+    color: '#4a5568',
+    lineHeight: 22,
+    marginBottom: 12,
+    textAlign: 'justify'
+  },
+  infoModalListItem: {
+    fontSize: 15,
+    color: '#4a5568',
+    lineHeight: 22,
+    marginBottom: 6,
+    marginLeft: 10
+  },
+  infoModalStrong: {
+    fontWeight: 'bold',
+    color: '#2d3748'
+  },
+  closeButton: {
+    backgroundColor: '#E53935',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+    alignSelf: 'center'
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A202C'
+  },
+  modalClose: {
+    fontSize: 24,
+    color: '#A0AEC0',
+    padding: 5
+  }
+});

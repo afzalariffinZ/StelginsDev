@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useLanguage } from './i18n/LanguageContext';
 
 
@@ -9,6 +9,15 @@ const { width } = Dimensions.get('window');
 export default function PermissionsScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+
+  const { name, patientId: patientIdParam } = useLocalSearchParams() as { name?: string, patientId?: string };
+  const patientId = patientIdParam;
+
+  const patientCredentials = {
+    name: name,    
+    patientId: patientId, 
+    
+  };
 
   return (
     <View style={styles.container}>
@@ -36,7 +45,7 @@ export default function PermissionsScreen() {
             </Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.continueButton} onPress={() => router.replace('/HomeScreen')}>
+        <TouchableOpacity style={styles.continueButton} onPress={() => router.replace({pathname:'/HomeScreen',params: patientCredentials})}>
           <Text style={styles.continueButtonText}>{t('continue')}</Text>
         </TouchableOpacity>
       </View>

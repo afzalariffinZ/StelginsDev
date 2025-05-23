@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import PIL.Image  # For image handling with Gemini Vision
 import io
+
 import firebase_admin
 from firebase_admin import db, credentials
 import pandas as pd
@@ -20,20 +21,53 @@ import re
 import json
 from datetime import datetime, date
 import base64
+import chromadb
+from chromadb.config import Settings
+# For image understanding
+import chromadb
 
-
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 # Load environment variables (optional, but good practice for API keys)
 load_dotenv()
 
-
-genai.configure(api_key="YOUR_API_KEY")
+genai.configure(api_key="AIzaSyABQzFsm5x5QWxTzTKdfTtHIi05ty5dlL0")
 
 # --- Initialize Gemini Models ---
 # For text-only chat
 text_model = genai.GenerativeModel("gemini-2.0-flash")
 chat_session = text_model.start_chat(history=[])  # Maintain chat history for context
 
-# For image understanding
+import zipfile
+import os
+
+# Path to the zip file
+zip_path = "chroma_store.zip"
+
+# Destination folder to extract into
+extract_to = "chroma_store"
+
+# Make sure the directory exists
+os.makedirs(extract_to, exist_ok=True)
+
+# Extract the zip file
+with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+    zip_ref.extractall(extract_to)
+
+print(f"Extracted to {extract_to}")
+
+
+persist_directory = "chroma_store"
+
+
+client = chromadb.PersistentClient(path=persist_directory)
+
+embedding_function = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+
+# Define a Chroma vectorstore
+vectorstore = Chroma(client=client, collection_name="food_facts", embedding_function=embedding_function)
+
 
 # --- FastAPI App ---
 
@@ -90,7 +124,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Or restrict to your frontend's origin in production
+    allow_origins=["*"],  # Or restrict to your frontend's origin in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -157,7 +191,6 @@ async def handle_chat(chat_message: ChatMessage, patientid:int):
             "Do not make your response too lengthy. Simplify but also keep the important detail in your response and ensure that it is easily understandable. " \
             "If the user speaks in their own native language, make sure to reply in their language as well" \
         )
-
         content_parts.append(
             f"""
             This is some information about the user : {patient_info_dict},
@@ -165,8 +198,6 @@ async def handle_chat(chat_message: ChatMessage, patientid:int):
             And this is some limits the doctor has set for the patient for his/her daily meals: {food_limit_dict}
             -----------------------------------------
             And this is the some of the patient's realtime information for today : {todays_diet_log}
-
-
             """
         )
 
@@ -251,18 +282,21 @@ async def upload_image(
 
         # Enhanced prompt for more robust JSON
         prompt = f"""
-            Analyze the food items in the image.
-            Provide the main food item name and its estimated nutritional values for calories (in kcal), fat (in g), sodium (in g), and sugar (in g). DIVIDE THE VALUE OF SODIUM BY 1000 ONLY THEN YOU PROCEED TO RESPONSE.
-            Respond ONLY with a valid JSON object in the following format and nothing else:
+            1. Persona: You are nutritionist that help to analyze the food items in the image.
+            2. Identify the dish and list out all of its common potential ingredients.  
+            3. If it's a common food item, like cream cheese, chocolate, etc. Then, just consider them as an ingredient.  
+            4. If multiple distinct food items are clearly visible and separable, list the dominant one or a combined estimate.
+            5. Your Respond should be in json format that have keys called Food_Name and Ingredients where the value for the key Ingredients is an array of strings the ingredient list along with its gram measurement seperated with commas, no unnecessary texts. For example:
+            Milk 100g, Chicken 80g, etc.
+            This is an example of the json file
+             5. The json file should be in the following format:
             {{
-              "Food": "string",
-              "calories(kcal)": float_or_int,
-              "fat(g)": float_or_int,
-              "sodium(g)": float_or_int,
-              "sugar(g)": float_or_int
+              "Food_Name": "string",
+              "Ingredients": array_of_ingredients with measurements in grams  
             }}
-            If multiple distinct food items are clearly visible and separable, list the dominant one or a combined estimate.
-            If the image does not contain food, return a JSON with null or 0 values for nutrients and "Not a food item" for "Food".
+            6.If the image does not contain food, return a JSON with null or 0 values for nutrients put the Food_Name as "Not A Food Item".
+
+            YOU SHOULD RETURN A JSON FILE AND NOTHING ELSE
         """
 
         prompt_parts = [prompt, img]
@@ -271,23 +305,74 @@ async def upload_image(
         gemini_response = text_model.generate_content(
             prompt_parts
         )  # Use a different variable name
-        answer = gemini_response.text.strip()  # Strip whitespace
+        answer1 = gemini_response.text.strip()  # Strip whitespace
 
         # Clean up potential markdown code blocks
-        answer = re.sub(r"^```json\s*", "", answer, flags=re.MULTILINE)
-        answer = re.sub(r"\s*```$", "", answer, flags=re.MULTILINE)
-        answer = answer.strip()
+        answer1 = re.sub(r"^```json\s*", "", answer1, flags=re.MULTILINE)
+        answer1 = re.sub(r"\s*```$", "", answer1, flags=re.MULTILINE)
+        answer1 = answer1.strip()
 
-        print(f"Raw Gemini response text: {answer}")
+        print(f"Raw Gemini response text: {answer1}")
+
+        answer1_json = json.loads(answer1)
+
+
+        # Parse the ingredient list
+        ingredients = answer1.split(',')
+        parsed_ingredients = []
+        print(f"Raw Gemini response text: {ingredients}")
+        # Initialize ChromaDB client with existing database
+
+
+        context_rag = ""
+
+        for i in ingredients :
+            results = vectorstore.similarity_search(i,k=1)
+            print(results[0].page_content)
+            
+
+            context_rag += results[0].page_content + "/n"
+
+        print(f"Parsed ingredients with matches and nutrition: {context_rag}")
+
+        final_prompt = f"""
+        1. Given the list of ingredients and their weight measurement, calculate the sum of all nutrient content for the food (calorie, fat, sugars , sodium)
+        2. List of ingredients: {answer1}
+        3. Here are some additional information :
+        {context_rag}
+
+        ONLY USE THIS INFORMATION IF IT IS NECESSARY, IF IT IS NOT NECESSARY DONT USE IT
+
+        4. From the sum of the nutrients content, compile them to a single json file.
+        5. The json file should be in the following format:
+        {{
+              "Food": "string",
+              "calories(kcal)": float_or_int,
+              "fat(g)": float_or_int,
+              "sodium(g)": float_or_int,
+              "sugar(g)": float_or_int
+            }}
+        7. RESPOND ONLY WITH JSON FILE AND NOTHING ELSE
+        """
+
+        
+        gemini_response = text_model.generate_content(
+            final_prompt
+        )  # Use a different variable name
+        answer2 = gemini_response.text.strip()  
+
+        # Clean up the response by removing markdown code block formatting
+        answer2 = answer2.replace('```json', '').replace('```', '').strip()
 
         try:
-            answer_json = json.loads(answer)
+            answer_json = json.loads(answer2)
         except json.JSONDecodeError as e:
-            print(f"JSONDecodeError: {e}. Gemini response was: {answer}")
+            print(f"JSONDecodeError: {e}. Gemini response was: {answer2}")
             raise HTTPException(
                 status_code=500,
-                detail=f"AI model returned invalid JSON. Response: {answer}",
+                detail=f"AI model returned invalid JSON. Response: {answer2}",
             )
+        
 
         print(f"Parsed Gemini JSON: {answer_json}")
 
@@ -312,26 +397,6 @@ async def upload_image(
         answer_json["image_link"] = image_link
         print(f"Imgur link: {image_link}")
 
-        now = datetime.now()
-        dt_string = now.strftime("%Y-%m-%d %H:%M:%S")
-
-        table_ref = db.reference("diet_logs")
-
-        new_diet_log = {
-            "PatientID": patientid,
-            "calorie_intake": answer_json.get(
-                "calories(kcal)", 0
-            ),  # Use .get for safety
-            "datetime": dt_string,
-            "fat_intake": answer_json.get("fat(g)", 0),
-            "imagelink": image_link,
-            "notes": answer_json.get("Food", "N/A"),
-            "sodium_intake": answer_json.get("sodium(g)", 0),
-            "sugar_intake": answer_json.get("sugar(g)", 0),
-        }
-
-        print(f"Saving to Firebase: {new_diet_log}")
-        table_ref.push(new_diet_log)
 
         return answer_json  # This is what React Native receives
 
@@ -358,8 +423,199 @@ async def upload_image(
                 status_code=400,
                 detail=f"Content blocked by AI: {e.prompt_feedback.block_reason.name}",
             )
-        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"{str(e)}")
+    
+class insert_logs_request(BaseModel):
+    patientid:int
+    Food_name: str
+    Calorie_kcal:float
+    Fat_g: float
+    Sugar_g :float
+    Sodium_g :float
+    image_link:str
 
+@app.post("/insert_logs")
+async def insert_logs(req: insert_logs_request):
+    try:
+        now = datetime.now()
+        dt_string = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        table_ref = db.reference("diet_logs")
+
+        new_diet_log = {
+            "PatientID": req.patientid,
+            "calorie_intake":req.Calorie_kcal ,  # Use .get for safety
+            "datetime": dt_string,
+            "fat_intake": req.Fat_g,
+            "imagelink": req.image_link,
+            "notes": req.Food_name,
+            "sodium_intake": req.Sodium_g,
+            "sugar_intake": req.Sugar_g,
+        }
+
+        print(f"Saving to Firebase: {new_diet_log}")
+        table_ref.push(new_diet_log)
+        return {"Status":"Successful"}
+    except:
+        return {"Status":"Error"}
+
+    
+@app.post("/upload-image-and-Name")
+async def upload_image_Name(
+    FoodName: str = Form(...),
+    patientid: int = Form(...),  # MODIFIED: Receive patientid as Form data
+    file: UploadFile = File(...),
+):
+    try:
+        IMGUR_CLIENT_ID = (
+            "a88f57f1c0bc4fd"  # Keep this secure, ideally from env variables
+        )
+        IMGUR_UPLOAD_ENDPOINT = "https://api.imgur.com/3/image"
+
+        contents = await file.read()
+        print(f"Received file size: {len(contents)} bytes")
+
+        img = PIL.Image.open(io.BytesIO(contents))
+
+        # Enhanced prompt for more robust JSON
+        prompt = f"""
+            1. Persona: You are nutritionist that help to analyze the food items in the image.
+            2. Identify the dish and list out all of its common potential ingredients.  
+            3. If it's a common food item, like cream cheese, chocolate, etc. Then, just consider them as an ingredient.  
+
+            4. Respond with ONLY the ingredient list along with its gram measurement seperated with commas, no unnecessary texts. For example:
+            Milk 100g, Chicken 80g, etc.
+
+            5. If multiple distinct food items are clearly visible and separable, list the dominant one or a combined estimate.
+            6. The Name of the food in the picture is {FoodName}
+            7. If the image does not contain food, return a JSON with null or 0 values for nutrients and "Not a food item" for "Food" .
+        """
+
+        prompt_parts = [prompt, img]
+
+        print(f"Sending prompt to Gemini for patient: {patientid}")
+        gemini_response = text_model.generate_content(
+            prompt_parts
+        )  # Use a different variable name
+        answer1 = gemini_response.text.strip()  # Strip whitespace
+
+        # Clean up potential markdown code blocks
+        answer1 = re.sub(r"^```json\s*", "", answer1, flags=re.MULTILINE)
+        answer1 = re.sub(r"\s*```$", "", answer1, flags=re.MULTILINE)
+        answer1 = answer1.strip()
+
+        print(f"Raw Gemini response text: {answer1}")
+        
+
+        # Parse the ingredient list
+        ingredients = answer1.split(',')
+        parsed_ingredients = []
+        print(f"Raw Gemini response text: {ingredients}")
+        # Initialize ChromaDB client with existing database
+
+
+        context_rag = ""
+
+        for i in ingredients :
+            results = vectorstore.similarity_search(i,k=1)
+            print(results[0].page_content)
+            
+
+            context_rag += results[0].page_content + "/n"
+
+        
+        print(f"Parsed ingredients with matches and nutrition: {context_rag}")
+
+        final_prompt = f"""
+        1. Given the list of ingredients and their weight measurement, calculate the sum of all nutrient content for the food (calorie, fat, sugars , sodium)
+        2. List of ingredients: {answer1}
+        3. Here are some additional information :
+        {context_rag}
+
+        ONLY USE THIS INFORMATION IF IT IS NECESSARY, IF IT IS NOT NECESSARY DONT USE IT
+
+        4. From the sum of the nutrients content, compile them to a single json file.
+        5. The json file should be in the following format:
+        {{
+              "Food": {FoodName},
+              "calories(kcal)": float_or_int,
+              "fat(g)": float_or_int,
+              "sodium(g)": float_or_int,
+              "sugar(g)": float_or_int
+            }}
+        7. RESPOND ONLY WITH JSON FILE AND NOTHING ELSE
+        """
+
+        gemini_response = text_model.generate_content(
+            final_prompt
+        )  # Use a different variable name
+        answer2 = gemini_response.text.strip()  
+
+        # Clean up the response by removing markdown code block formatting
+        answer2 = answer2.replace('```json', '').replace('```', '').strip()
+
+        try:
+            answer_json = json.loads(answer2)
+        except json.JSONDecodeError as e:
+            print(f"JSONDecodeError: {e}. Gemini response was: {answer2}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"AI model returned invalid JSON. Response: {answer2}",
+            )
+        
+
+
+        print(f"Parsed Gemini JSON: {answer_json}")
+
+        # Validate expected keys from Gemini (optional but good practice)
+        expected_keys = ["Food", "calories(kcal)", "fat(g)", "sodium(g)", "sugar(g)"]
+        for key in expected_keys:
+            if key not in answer_json:
+                print(f"Warning: Key '{key}' missing in Gemini response. Using None/0.")
+                # Provide default if a key is missing to avoid KeyError later
+                if "kcal" in key or "(g)" in key:
+                    answer_json[key] = 0  # Default to 0 for numerical values
+                else:
+                    answer_json[key] = "N/A"  # Default for string values
+
+        print("Uploading to Imgur...")
+        headers = {"Authorization": f"Client-ID {IMGUR_CLIENT_ID}"}
+        imgur_resp = requests.post(  # Use a different variable name
+            IMGUR_UPLOAD_ENDPOINT, headers=headers, files={"image": contents}
+        )
+        imgur_resp.raise_for_status()  # Will raise an exception for 4XX/5XX status
+        image_link = imgur_resp.json()["data"]["link"]
+        answer_json["image_link"] = image_link
+        print(f"Imgur link: {image_link}")
+
+
+        return answer_json  # This is what React Native receives
+
+    except requests.exceptions.RequestException as e:
+        print(f"Imgur API request error: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Error communicating with Image Hosting service: {str(e)}",
+        )
+    except PIL.UnidentifiedImageError:
+        print("Error: Cannot identify image file.")
+        raise HTTPException(status_code=400, detail="Invalid or corrupted image file.")
+    except Exception as e:
+        print(f"Error during image processing: {e}")
+        # Check for Gemini-specific blocking if applicable
+        if (
+            hasattr(e, "prompt_feedback")
+            and hasattr(e.prompt_feedback, "block_reason")
+            and e.prompt_feedback.block_reason
+        ):
+            # For this, you'd need a Pydantic model for the error response, or just return a dict
+            # return {"message": f"Content blocked: {e.prompt_feedback.block_reason.name}", "original_filename": file.filename or "unknown"}
+            raise HTTPException(
+                status_code=400,
+                detail=f"Content blocked by AI: {e.prompt_feedback.block_reason.name}",
+            )
+        raise HTTPException(status_code=500, detail=f"{str(e)}")
+    
 
 @app.post("/upload_image_and_ask", response_model=ImageAIResponse)
 async def upload_image_and_ask(prompt: str, file: UploadFile = File(...)):
@@ -446,6 +702,7 @@ class SignUpPatient(BaseModel):
     email: str
     name: str
     password: str
+    dateofbirth: str
 
 
 @app.post("/signup_pat")
@@ -471,6 +728,7 @@ async def signup_pat(req: SignUpPatient):
 
     new_pat = {
         "Age": req.age,
+        "DateOfBirth": req.dateofbirth,
         "Email": req.email,
         "HealthCondition": "",
         "PatientName": req.name,
@@ -479,7 +737,7 @@ async def signup_pat(req: SignUpPatient):
     }
 
     table_ref.push(new_pat)
-    return {"success": True, "message": "Patient registered successfully!"}
+    return {"success": True, "message": "Patient registered successfully!", "patientId": pat_id}
 
 
 @app.get("/get_diet_logs")
@@ -555,7 +813,7 @@ async def get_today_diet_log(patientid: int = Query(...)):
     df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
     df["date"] = df["datetime"].dt.date
 
-    # 5) Filter to only today’s entries
+    # 5) Filter to only today's entries
     today_df = df[df["date"] == todays_date]
 
     # 6) Sum totals (coerce NaN to 0)

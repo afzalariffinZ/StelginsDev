@@ -1,4 +1,3 @@
-// AIChatScreen.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView,

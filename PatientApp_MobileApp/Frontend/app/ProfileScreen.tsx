@@ -12,8 +12,8 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE;
 
 // Interface for the patient data expected from the backend
 interface PatientData {
-  Age: number;
-  DateOfBirth: string;
+  Age: number; // Age as provided by backend (can be used as fallback)
+  DateOfBirth: string; // Date of birth string (e.g., "YYYY-MM-DD")
   Email: string;
   HealthCondition: string;
   PatientID: number;
@@ -25,6 +25,32 @@ interface PatientData {
   Weight?: number;
   Height?: number;
 }
+
+// Helper function to calculate age from date of birth string
+const calculateAge = (dateOfBirthString: string): number | null => {
+  if (!dateOfBirthString) {
+    console.warn("DateOfBirth string is missing for age calculation.");
+    return null;
+  }
+  try {
+    const birthDate = new Date(dateOfBirthString);
+    // Check if birthDate is a valid date
+    if (isNaN(birthDate.getTime())) {
+      console.warn("Invalid DateOfBirth string for age calculation:", dateOfBirthString);
+      return null;
+    }
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : null; // Return null if age is negative (e.g. future birth date)
+  } catch (error) {
+    console.error("Error calculating age:", error);
+    return null;
+  }
+};
 
 export default function ProfileScreen() {
   const { name: nameParam, patientId: patientIdParam } = useLocalSearchParams() as { name?: string, patientId?: string };
@@ -133,7 +159,24 @@ export default function ProfileScreen() {
               <View style={styles.infoCard}>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>{t('age')}</Text>
-                  <Text style={styles.infoValue}>{patientData?.Age ? `${patientData.Age} ${t('years') || 'tahun'}` : t('notAvailable')}</Text>
+                  <Text style={styles.infoValue}>
+                    {(() => {
+                      // Priority 1: Calculate from DateOfBirth
+                      if (patientData?.DateOfBirth) {
+                        const calculatedAge = calculateAge(patientData.DateOfBirth);
+                        if (calculatedAge !== null) {
+                          return `${calculatedAge} ${t('years') || 'tahun'}`;
+                        }
+                      }
+                      // Priority 2: Use pre-existing Age from API if DateOfBirth calculation failed or DOB not present
+                      // Check if Age is a number (including 0)
+                      if (patientData?.Age !== undefined && patientData.Age !== null && typeof patientData.Age === 'number') {
+                        return `${patientData.Age} ${t('years') || 'tahun'}`;
+                      }
+                      // Fallback: Not available
+                      return t('notAvailable');
+                    })()}
+                  </Text>
                 </View>
                 {/* Gender, Weight, Height are not in the API response, keeping dummy/placeholder for now */}
                 <View style={styles.infoRow}>
