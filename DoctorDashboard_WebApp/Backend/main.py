@@ -40,7 +40,7 @@ app.add_middleware(
 )
 
 # ——— 1) Initialize Firebase Admin (do this once) ———
-cred = credentials.Certificate('credentials2.json')
+cred = credentials.Certificate('credentials.json')
 firebase_admin.initialize_app(cred, {
     'databaseURL': 'https://ellm-hackathon-default-rtdb.asia-southeast1.firebasedatabase.app/'
 })
@@ -811,12 +811,21 @@ import os
 import re
 import google.generativeai as genai
 
+class ChatBotDrRequest(BaseModel):
+    dr_id: int
+    question: str
+
 @app.post("/chat_bot_dr")
-def chat_bot_dr(dr_id:int, question:str):
+def chat_bot_dr(request_data: ChatBotDrRequest):
+
+    dr_id = request_data.dr_id          # Access from parsed body
+    question = request_data.question 
     # Load API key from custom env file
     load_dotenv(dotenv_path="api_keys.env")
     api_key = os.getenv("OPENAI_API_KEY")
 
+    with open("AI_memory.txt", "r") as file:
+        history = file.read()
 
     # Check if API key was loaded
     if not api_key:
@@ -835,7 +844,7 @@ def chat_bot_dr(dr_id:int, question:str):
     HealthCondition    object
     PatientID           int64
     PatientName        object
-    patient_status     object (here the status has only 3 possible values which is "warning","stable" and "urgent")
+    patient_status     object (here the status has only 3 possible values which is "WARNING","STABLE" and "URGENT")
 
 
     table name : "diet_plan_settings" (this is a table where the doctor will set out the daily nutrition limits and targets for each patient )
@@ -881,18 +890,23 @@ def chat_bot_dr(dr_id:int, question:str):
     
     the question that you need to answer is : {question}
 
-    the output of your python code should be stored in a variable called final_answer (This final_answer  CANNOT BE A SENTENCE because we cant perform data analysis using a sentence),
+    the output of your python code should be stored in a variable called final_answer (This final_answer  CANNOT BE A SENTENCE because we cant perform data analysis using a sentence), However, if the question logically results in a list of distinct items (e.g., a list of meals, a list of patients, a list of dates), then `final_answer` SHOULD be a Python list of strings. Each string in the list should be a complete description of one item. For example, if listing meals for a patient, `final_answer` could be `['On 2025-05-05 at 12:00:31, John Doe ate Nasi Lemak.', 'On 2025-05-05 at 21:10:43, John Doe ate Grilled Cheese Sandwich.']`. Do NOT concatenate these into a single string in `final_answer` if they represent distinct list items.
     but if the question cannot be answered by a single value and needs a graph, draw the graph using matplotlib and store the plt object in a variable called final_graph and store the graph in graph.png and store the dictionary version of the graph in final_answer
 
     summary :
     If the question can be answered directly without any graph , put the final output in a variable called final_answer and set final_graph as None
     If the question needs a graph to answer it, draw a graph using matplotlib and store the plt object in a variable called final_graph and store the graph in graph.png (This part is very important) and store the dictonary version of the graph in the variable final_answer, make sure this dictionary version is easy to understand cuz im gonna pass this variable to another llm
+    If the question does not have any relation with the data dont generate a graph, just return None for the final_graph and for final_answer return a string saying "I dont know"
+    However, if the question logically results in a list of distinct items (e.g., a list of meals, a list of patients, a list of dates), then `final_answer` SHOULD be a Python list of strings. Each string in the list should be a complete description of one item. For example, if listing meals for a patient, `final_answer` could be `['On 2025-05-05 at 12:00:31, John Doe ate Nasi Lemak.', 'On 2025-05-05 at 21:10:43, John Doe ate Grilled Cheese Sandwich.']`. Do NOT concatenate these into a single string in `final_answer` if they represent distinct list items.
 
     your response should only be python code and NOTHING ELSE
 
     dont hallucinate and answer the question directly and precisely
 
     today is 2025-05-8 (May 8th)
+
+    this the chat_history:
+    {history}
 
 
     """
@@ -940,15 +954,22 @@ def chat_bot_dr(dr_id:int, question:str):
     # Use the Gemini Pro model (text-only)
     model = genai.GenerativeModel("gemini-2.0-flash")
 
-    with open("AI_memory.txt", "r") as file:
-        history = file.read()
 
     prompt2 = f"""
     This is the chat_history:{history}
     Based on the final output which is this :{Final_Output},
     provide a proper answer to this question which is : {question}
     make sure your answer is direct and dont add anything unnecessary
-    if you think the question is a troll just asnwer i dont know
+    **If the `Final_Output` appears to be a list of items (e.g., it looks like a Python list of strings, such as `['item 1 description.', 'item 2 description.', 'another item.']`), then you MUST format your answer as a bulleted list. Each item from the list should be a separate bullet point.**
+    For example, if `Final_Output` is `['On 2025-05-05 at 12:00:31, he ate Nasi Lemak.', 'On 2025-05-05 at 21:10:43, he ate Grilled Cheese.']`, your response should be:
+    * On 2025-05-05 at 12:00:31, he ate Nasi Lemak.
+    * On 2025-05-05 at 21:10:43, he ate Grilled Cheese.
+
+    If `Final_Output` is not a list of items, answer the question naturally based on its content.
+
+    If you think the question is a troll just answer "As an AI Doctor Assistant, I am designed to provide support within the scope of my programming and available data. Unfortunately, I am not equipped to answer this particular question, as it may fall outside my current capabilities or the information I have access to."
+    and if the question is just a standard greeting like "hello" or "hi" just answer normally.
+    Do not include the original `Final_Output` in your response if you are reformatting it (e.g., into bullet points).
     """
     response_gemini = model.generate_content(prompt2)
 
@@ -1029,7 +1050,6 @@ def chat_bot_dr(dr_id:int, question:str):
 
 
     
-
 
 
 
