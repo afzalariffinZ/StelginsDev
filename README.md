@@ -3,6 +3,8 @@
 
 # 🏥 Stelggin 
 ![Stellgin intro](https://github.com/user-attachments/assets/ca08a2bd-3bc7-461b-8f7e-b79ada56f7da)
+![Stelggin (2)](https://github.com/user-attachments/assets/5ac56610-dca5-4aea-bfaa-e967e2e4ae26)
+
 
 ## UI Snippets  
 ### Mobile Application (Patient's Side)
