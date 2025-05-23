@@ -8,49 +8,29 @@ import { Input } from '@/components/ui/input';   // Assuming this path is correc
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 const API_ENDPOINT = '/chat_bot_dr';
-const DR_ID = 20001;
+// const DR_ID = 20001; // This line is removed as DrID will be dynamic
 
-// Helper function to format date and time strings
+// Helper function to format date and time strings (remains the same)
 const formatDateAndTime = (text) => {
     if (typeof text !== 'string') return text;
-
-    // Regex to find "YYYY-MM-DD at HH:MM:SS"
     const dateTimeRegex = /(\d{4}-\d{2}-\d{2}) at (\d{2}:\d{2}:\d{2})/g;
-
     return text.replace(dateTimeRegex, (match, dateStr, timeStr) => {
-        // Combine into a string that's reliably parsable by new Date()
-        const isoDateTimeStr = `${dateStr}T${timeStr}`; // e.g., "2025-05-21T09:39:57"
+        const isoDateTimeStr = `${dateStr}T${timeStr}`;
         const dateObj = new Date(isoDateTimeStr);
-
-        // Check if the date is valid
-        if (isNaN(dateObj.getTime())) {
-            return match; // If parsing fails, return the original matched string
-        }
-
-        // Format the date: e.g., "May 21, 2025"
+        if (isNaN(dateObj.getTime())) return match;
         const formattedDate = dateObj.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
+            year: 'numeric', month: 'long', day: 'numeric',
         });
-
-        // Format the time: e.g., "9:39 AM" (seconds are omitted for brevity)
         const formattedTime = dateObj.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
+            hour: 'numeric', minute: '2-digit', hour12: true,
         });
-
         return `${formattedDate}, ${formattedTime}`;
     });
 };
 
-// Helper component to render text with bold (**text**), bullet points (* text), and formatted dates
+// Helper component to render text (remains the same)
 const RenderMessageContent = ({ text }) => {
-    if (typeof text !== 'string' || text.trim() === '') {
-        return null;
-    }
-
+    if (typeof text !== 'string' || text.trim() === '') return null;
     const lines = text.split('\n');
     const elements = [];
     let currentListItems = [];
@@ -70,44 +50,32 @@ const RenderMessageContent = ({ text }) => {
 
     lines.forEach((line, lineIndex) => {
         const trimmedLine = line.trimStart();
-
-        if (trimmedLine.startsWith('* ')) { // Check if the line is a bullet point
-            // If there were previous non-list items, they are already pushed.
-            // This line is a list item.
-            const listItemText = trimmedLine.substring(2); // Remove the '* ' prefix
-            const parts = listItemText.split('**'); // Split by bold marker
-            
+        if (trimmedLine.startsWith('* ')) {
+            const listItemText = trimmedLine.substring(2);
+            const parts = listItemText.split('**');
             currentListItems.push(
                 <li key={`li-${listKeyBase}-${lineIndex}`}>
                     {parts.map((part, partIndex) =>
-                        partIndex % 2 === 1 ? ( // Odd parts (between **) are bold
+                        partIndex % 2 === 1 ? (
                             <strong key={partIndex}>{part}</strong>
                         ) : (
-                            // Apply date/time formatting to plain text parts
                             <React.Fragment key={partIndex}>{formatDateAndTime(part)}</React.Fragment>
                         )
                     )}
                 </li>
             );
-        } else { // Line is not a list item
-            flushListItems(); // If there was an active list, render it before this non-list line.
-
-            // Render non-list item line (also handles bolding and date formatting)
+        } else {
+            flushListItems();
             const parts = line.split('**');
-            
-            if (line.trim() === '') { // Handle intentionally empty lines for spacing
-                 elements.push(
-                    <div key={`div-empty-${lineIndex}`} className="h-[0.75em]" aria-hidden="true" />
-                );
+            if (line.trim() === '') {
+                elements.push(<div key={`div-empty-${lineIndex}`} className="h-[0.75em]" aria-hidden="true" />);
             } else {
-                // Render lines with text content
                 elements.push(
                     <div key={`div-text-${lineIndex}`}>
                         {parts.map((part, partIndex) =>
                             partIndex % 2 === 1 ? (
                                 <strong key={partIndex}>{part}</strong>
                             ) : (
-                                // Apply date/time formatting to plain text parts
                                 <React.Fragment key={partIndex}>{formatDateAndTime(part)}</React.Fragment>
                             )
                         )}
@@ -116,13 +84,8 @@ const RenderMessageContent = ({ text }) => {
             }
         }
     });
-
-    flushListItems(); // After processing all lines, ensure any pending list items are rendered.
-
-    if (elements.length === 0) {
-        return null;
-    }
-
+    flushListItems();
+    if (elements.length === 0) return null;
     return <>{elements}</>;
 };
 
@@ -135,24 +98,45 @@ export default function DoctorChatbotPage() {
             sender: 'bot',
             imageLink: null,
         },
-        // Example message for testing:
-        // {
-        //     id: 'test-format-1',
-        //     text: "Here's what Patient 10001 ate:\n* On 2025-05-21 at 09:39:57, he ate Cream Cheese.\n* On **2025-05-22 at 14:15:30**, he had a **very important** meal.\n* Another item on 2025-05-23 at 20:05:00.",
-        //     sender: 'bot',
-        //     imageLink: null,
-        // },
-        // {
-        //     id: 'test-format-2',
-        //     text: "Patient history for 2025-06-01 at 10:00:00 shows improvement.\nNext checkup scheduled for 2025-06-15 at 11:30:00.",
-        //     sender: 'bot',
-        //     imageLink: null,
-        // }
     ]);
     const [inputValue, setInputValue] = useState('');
     const [isBotTyping, setIsBotTyping] = useState(false);
     const chatContainerRef = useRef(null);
+    const [dynamicDrId, setDynamicDrId] = useState(null); // State to hold DrID
+    const [drIdError, setDrIdError] = useState(''); // State to hold error message for DrID
 
+    // Effect to retrieve DrID from localStorage on component mount
+    useEffect(() => {
+        const doctorDataString = localStorage.getItem("doctor");
+        if (doctorDataString) {
+            try {
+                const doctorDataObject = JSON.parse(doctorDataString);
+                if (doctorDataObject && typeof doctorDataObject.DrID !== 'undefined') {
+                    setDynamicDrId(doctorDataObject.DrID);
+                    setDrIdError(''); // Clear any previous error
+                    console.log("Successfully fetched DrID:", doctorDataObject.DrID);
+                } else {
+                    const errorMsg = "DrID not found in localStorage data. Chat functions may be limited.";
+                    console.error(errorMsg);
+                    setDrIdError(errorMsg);
+                    setMessages(prev => [...prev, { id: 'drIdError', text: errorMsg, sender: 'bot', imageLink: null }]);
+
+                }
+            } catch (error) {
+                const errorMsg = "Error parsing doctor data from localStorage. Chat functions may be limited.";
+                console.error(errorMsg, error);
+                setDrIdError(errorMsg);
+                setMessages(prev => [...prev, { id: 'drIdParseError', text: errorMsg, sender: 'bot', imageLink: null }]);
+            }
+        } else {
+            const errorMsg = "Doctor data not found in localStorage. Please log in. Chat functions may be limited.";
+            console.warn(errorMsg);
+            setDrIdError(errorMsg);
+            setMessages(prev => [...prev, { id: 'noDrData', text: errorMsg, sender: 'bot', imageLink: null }]);
+        }
+    }, []); // Empty dependency array ensures this runs only once on mount
+
+    // Effect to scroll chat to bottom (remains the same)
     useEffect(() => {
         if (chatContainerRef.current) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -168,6 +152,21 @@ export default function DoctorChatbotPage() {
             return;
         }
 
+        if (!dynamicDrId) {
+            console.error("DrID is not available. Cannot send message.");
+            const errorMsg = "Doctor ID is not configured. Cannot send message. Please ensure you are logged in correctly.";
+            // Add a message to the chat UI indicating the error
+            setMessages((prevMessages) => [...prevMessages, {
+                id: Date.now().toString(),
+                text: errorMsg,
+                sender: 'bot',
+                imageLink: null,
+            }]);
+            setDrIdError(errorMsg); // Update error state
+            setIsBotTyping(false); // Ensure bot is not marked as typing
+            return;
+        }
+
         const userMessageText = inputValue;
         const newUserMessage = {
             id: Date.now().toString(),
@@ -178,10 +177,11 @@ export default function DoctorChatbotPage() {
         setMessages((prevMessages) => [...prevMessages, newUserMessage]);
         setInputValue('');
         setIsBotTyping(true);
+        setDrIdError(''); // Clear error on successful attempt to send
 
         try {
             const payload = {
-                dr_id: DR_ID,
+                dr_id: dynamicDrId, // Use the dynamic DrID from state
                 question: userMessageText,
             };
 
@@ -207,7 +207,7 @@ export default function DoctorChatbotPage() {
             const imageLinkFromApi = data.image_link || null;
 
             const newBotMessage = {
-                id: (Date.now() + 1).toString(), // Ensure unique ID for bot message
+                id: (Date.now() + 1).toString(),
                 text: botResponseText,
                 sender: 'bot',
                 imageLink: graphPresent ? imageLinkFromApi : null,
@@ -217,7 +217,7 @@ export default function DoctorChatbotPage() {
         } catch (error) {
             console.error('Error fetching bot response:', error);
             const errorBotMessage = {
-                id: (Date.now() + 1).toString(), // Ensure unique ID for error message
+                id: (Date.now() + 1).toString(),
                 text: error.message || "Sorry, I couldn't connect to the assistant. Please try again later.",
                 sender: 'bot',
                 imageLink: null,
@@ -231,10 +231,19 @@ export default function DoctorChatbotPage() {
     const handleKeyPress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (!isBotTyping && inputValue.trim() !== '') {
+            if (!isBotTyping && inputValue.trim() !== '' && dynamicDrId) { // Also check dynamicDrId here
                 handleSendMessage();
+            } else if (!dynamicDrId && inputValue.trim() !== '') {
+                // Optionally trigger the error display if user tries to send without DrID
+                 handleSendMessage();
             }
         }
+    };
+
+    const getPlaceholderText = () => {
+        if (drIdError) return drIdError;
+        if (isBotTyping) return "Assistant is replying...";
+        return "Ask about your patients...";
     };
 
     return (
@@ -264,7 +273,6 @@ export default function DoctorChatbotPage() {
                             }`}
                         >
                             <RenderMessageContent text={msg.text} />
-
                             {msg.sender === 'bot' && msg.imageLink && (
                                 <div className="mt-2">
                                     <img
@@ -287,15 +295,18 @@ export default function DoctorChatbotPage() {
             </div>
 
             <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 backdrop-blur-sm sticky bottom-0 z-10">
+                {/* Optionally, display a persistent error message if DrID is missing */}
+                {/* {drIdError && !dynamicDrId && <p className="text-red-500 text-xs text-center mb-2">{drIdError}</p>} */}
                 <div className="flex items-center space-x-2 sm:space-x-3">
                     <Input
                         type="text"
                         value={inputValue}
                         onChange={handleInputChange}
                         onKeyPress={handleKeyPress}
-                        placeholder={isBotTyping ? "Assistant is replying..." : "Ask about your patients..."}
+                        placeholder={getPlaceholderText()}
                         className="flex-grow bg-slate-50 dark:bg-slate-700 dark:text-slate-50 focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-[#df0000] border-slate-300 dark:border-slate-600 rounded-lg text-base"
                         aria-label="Chat input"
+                        disabled={!dynamicDrId && !!drIdError} // Disable input if DrID error is critical
                     />
                     <Button
                         onClick={handleSendMessage}
@@ -303,7 +314,7 @@ export default function DoctorChatbotPage() {
                         aria-label="Send message"
                         size="lg"
                         type="submit"
-                        disabled={isBotTyping || inputValue.trim() === ''}
+                        disabled={isBotTyping || inputValue.trim() === '' || (!dynamicDrId && !!drIdError) } // Disable if bot typing, input empty, or critical DrID error
                     >
                         <Send size={20} className="sm:mr-2" />
                         <span className="hidden sm:inline text-base font-medium">Send</span>
