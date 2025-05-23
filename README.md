@@ -301,6 +301,7 @@ These LLMs are powered by **Google’s Gemini and OpenAI models** integrated thr
    The backend calls Gemini’s multimodal model, which can analyze the image and identify the food name and ingredients.
 
 3. **Retrieve Information from vector database**
+   
    From the ingredients retrieved from the response of the LLM, real nutritonal information is retrieved from a chromadb vector database to provide additional context to 
    the LLM to make more accurate nutritional estimates.
 
