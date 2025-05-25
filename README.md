@@ -1,9 +1,9 @@
 
 
 
-# 🏥 Stelggin 
+# 🏥 Stelgins 
 
-![Stelggin (2)](https://github.com/user-attachments/assets/5ac56610-dca5-4aea-bfaa-e967e2e4ae26)
+![Stelgins (2)](https://github.com/user-attachments/assets/5ac56610-dca5-4aea-bfaa-e967e2e4ae26)
 
 
 ## UI Snippets  
@@ -130,8 +130,8 @@
 
 
 
-## What is Stelggin
-This app called Stelggin is a personalized health management system designed for patients with diet-related conditions like obesity, hypertension, and diabetes. It helps patients track their meals, steps, and calorie intake in real time, while enabling doctors to monitor their progress, set consumption limits, and provide tailored dietary advice through a connected dashboard and AI-powered chatbot.
+## What is Stelgins
+This app called Stelgins is a personalized health management system designed for patients with diet-related conditions like obesity, hypertension, and diabetes. It helps patients track their meals, steps, and calorie intake in real time, while enabling doctors to monitor their progress, set consumption limits, and provide tailored dietary advice through a connected dashboard and AI-powered chatbot.
 
 ## Technical Architecture
 
