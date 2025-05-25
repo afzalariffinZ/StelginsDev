@@ -101,9 +101,9 @@
 
 
 ### Website Interface (Doctor's side)
-![login](https://github.com/user-attachments/assets/b4ae7d79-20c1-4f6f-bdd9-f9b5706b849a)
-![dashboard](https://github.com/user-attachments/assets/ef21db02-e783-4ff7-a81c-d978159bcacd)
-![MyPatients](https://github.com/user-attachments/assets/c5017207-3d20-49c0-9196-b46b54eae016)
+![login](https://github.com/user-attachments/assets/8650931a-a4a9-43d3-9fdc-a5585ca3fe10)
+![dashboard](https://github.com/user-attachments/assets/2e51d1cb-c2f0-42f2-a87a-096b99c6188a)
+![MyPatients](https://github.com/user-attachments/assets/e01076ee-7fe5-4dfd-96a8-7d566591f725)
 ![Ahmad_Bin_Ismail_dashboard](https://github.com/user-attachments/assets/43efe776-1bf5-4762-bad1-6a7d1126d5a4)
 ![dietlog](https://github.com/user-attachments/assets/69ba3e74-7c26-4038-a6be-6e675e353a64)
 ![steps log](https://github.com/user-attachments/assets/37f3a181-6fc8-4aa1-b448-77c6b54909ba)
