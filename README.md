@@ -3,7 +3,8 @@
 
 # 🏥 Stelgins 
 
-![Stelgins (2)](https://github.com/user-attachments/assets/5ac56610-dca5-4aea-bfaa-e967e2e4ae26)
+![Stelgins](https://github.com/user-attachments/assets/82580ab9-37e4-4bdc-bf85-7d7d17e16a3c)
+
 
 
 ## UI Snippets  
